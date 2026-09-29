@@ -68,24 +68,31 @@ RUN /opt/venv/bin/python /verify_nodes.py --cpu
 ARG HF_BASE=https://huggingface.co
 ENV HF_BASE=${HF_BASE}
 
+# curl, not wget: -f fails on HTTP errors, -L follows the CDN redirect, and
+# --retry/-C resume a dropped transfer. The first attempt at the LoRA stalled
+# for 40s, produced 0 bytes and STILL exited 0, so `set -e` did not catch it -
+# wget alone is not reliable enough for a one-shot 632 MB pull from an
+# untested mirror. verify_models.py is the real gate; this just makes the
+# download itself likely to succeed on the first try.
 RUN set -eux; \
     mkdir -p /comfyui/models/diffusion_models /comfyui/models/text_encoders \
              /comfyui/models/vae /comfyui/models/loras; \
+    fetch() { \
+      dest="$1"; url="$2"; \
+      echo ">>> $url"; \
+      curl -fL --retry 5 --retry-delay 5 --retry-connrefused --retry-all-errors \
+           -C - --connect-timeout 30 --speed-time 60 --speed-limit 1024 \
+           -o "$dest" "$url"; \
+      test -s "$dest" || { echo "EMPTY DOWNLOAD: $dest"; exit 1; }; \
+    }; \
     \
-    echo ">>> unet (FP8, klein variant - core UNETLoader)"; \
-    wget -q --show-progress --progress=dot:giga -O /comfyui/models/diffusion_models/flux-2-klein-9b-fp8.safetensors \
+    fetch /comfyui/models/diffusion_models/flux-2-klein-9b-fp8.safetensors \
       "${HF_BASE}/MIUProject/FLUX.2-klein-9b-fp8/resolve/main/flux-2-klein-9b-fp8.safetensors"; \
-    \
-    echo ">>> text encoder (GGUF, custom Qwen3-8B-Uncensor-v2 - CLIPLoaderGGUF)"; \
-    wget -q --show-progress --progress=dot:giga -O /comfyui/models/text_encoders/Qwen3-8B-Uncensor-v2.Q4_K_M.gguf \
+    fetch /comfyui/models/text_encoders/Qwen3-8B-Uncensor-v2.Q4_K_M.gguf \
       "${HF_BASE}/mradermacher/Qwen3-8B-Uncensor-v2-GGUF/resolve/main/Qwen3-8B-Uncensor-v2.Q4_K_M.gguf"; \
-    \
-    echo ">>> vae"; \
-    wget -q --show-progress --progress=dot:giga -O /comfyui/models/vae/flux2-vae.safetensors \
+    fetch /comfyui/models/vae/flux2-vae.safetensors \
       "${HF_BASE}/Thonatossss/flux2-vae/resolve/main/flux2-vae.safetensors"; \
-    \
-    echo ">>> head LoRA"; \
-    wget -q --show-progress --progress=dot:giga -o /comfyui/models/loras/bfs_head_v1_flux-klein_9b_step3500_rank128.safetensors \
+    fetch /comfyui/models/loras/bfs_head_v1_flux-klein_9b_step3500_rank128.safetensors \
       "${HF_BASE}/bond12321/bfs-head-klein9b/resolve/main/bfs_head_v1_flux-klein_9b_step3500_rank128.safetensors"
 
 # Fail the BUILD, not the job, if anything is missing or truncated. The first

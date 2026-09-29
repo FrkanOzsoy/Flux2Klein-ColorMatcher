@@ -19,6 +19,35 @@ import sys
 sys.path.insert(0, "/comfyui")
 import folder_paths  # noqa: E402
 
+# ComfyUI-GGUF registers .gguf under its OWN folder key at import time:
+#     update_folder_names_and_paths("clip_gguf", ["text_encoders", "clip"])
+# so a .gguf text encoder NEVER appears in the plain "text_encoders" list, and
+# "clip_gguf" does not even exist until that pack is imported. Checking
+# "text_encoders" alone reported a false failure on a perfectly good 4.8 GB file.
+for _p in ("/comfyui/custom_nodes/ComfyUI-GGUF",):
+    if os.path.isdir(_p) and _p not in sys.path:
+        sys.path.insert(0, _p)
+try:
+    import nodes as _gguf_nodes  # noqa: F401  (registers clip_gguf / unet_gguf)
+    print("  (ComfyUI-GGUF imported, clip_gguf key registered)")
+except Exception as _e:
+    print("  ! could not import ComfyUI-GGUF (%s: %s)" % (type(_e).__name__, _e))
+
+
+def listed_anywhere(key, name):
+    """True if the name shows up in this folder key or any registered variant."""
+    for k in (key, key + "_gguf", key.replace("text_encoders", "clip_gguf")):
+        try:
+            if name in folder_paths.get_filename_list(k):
+                return True
+        except Exception:
+            pass
+    # last resort: is it physically on disk where a loader would look?
+    for folder in folder_paths.get_folder_paths(key) or []:
+        if os.path.isfile(os.path.join(folder, name)):
+            return True
+    return False
+
 # (ComfyUI folder key, filename, expected bytes, human label)
 REQUIRED = [
     ("diffusion_models", "flux-2-klein-9b-fp8.safetensors", 8996 * 1048576,
@@ -47,7 +76,7 @@ for key, name, min_bytes, label in REQUIRED:
     # allow 2% slack: HF reports the blob size, filesystems round
     truncated = exists and size < min_bytes * 0.98
     try:
-        listed = name in folder_paths.get_filename_list(key)
+        listed = listed_anywhere(key, name)
     except Exception as exc:
         listed = False
         print("  ! could not list %s: %s" % (key, exc))
