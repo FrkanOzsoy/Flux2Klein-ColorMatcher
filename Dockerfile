@@ -31,15 +31,21 @@ RUN python -c "import cv2, numpy" || uv pip install opencv-python-headless
 # Assert the in-house node types register, then run ComfyUI's CPU startup check
 # so missing custom-node imports fail the build.
 #
-# This MUST be a script, not a `python -c` one-liner. spec_from_file_location()
-# does not insert the module into sys.modules, so the pack's relative import on
-# its first line raised:
-#     ModuleNotFoundError: No module named 'flux2_klein_color_matcher'
-# which failed both builds at [5/6]. verify_nodes.py registers the module
-# first and puts /comfyui on sys.path (the pack imports comfy.*).
-# The docstring in the script explains it in full.
+# --cpu is REQUIRED, not optional: importing comfy.model_management runs a
+# module-level VRAM probe (model_management.py:363) that calls
+# torch.cuda.current_device(). A build container has no GPU, so without it:
+#     RuntimeError: Found no NVIDIA driver on your system
+# comfy only takes the CPU path when args.cpu is set (model_management.py:158)
+# and cli_args fills args by parsing sys.argv - so the flag has to be on the
+# command line. The base image's own smoke test below passes the same flag for
+# the same reason.
+#
+# verify_nodes.py additionally fixes two earlier failures: it registers the
+# module in sys.modules before exec_module (the relative import on line 1 of
+# __init__.py cannot resolve otherwise) and puts /comfyui on sys.path (the
+# pack imports comfy.*). Its docstring documents all three.
 COPY verify_nodes.py /verify_nodes.py
-RUN /opt/venv/bin/python /verify_nodes.py
+RUN /opt/venv/bin/python /verify_nodes.py --cpu
 
 RUN cd /comfyui && timeout 300 python main.py --quick-test-for-ci --cpu
 

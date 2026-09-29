@@ -1,10 +1,9 @@
 """Build-time assertion: the workflow's node types must be registered.
 
-Usage:  /opt/venv/bin/python /verify_nodes.py
+Usage:  /opt/venv/bin/python /verify_nodes.py --cpu
 
-Run from INSIDE the image, where /comfyui is the ComfyUI checkout.
-
-Two bugs this script exists to fix (both killed the Docker build):
+MUST be run with --cpu. Three separate things have broken this build, and each
+is documented below so the next failure is diagnosable from the log alone:
 
 1. `spec_from_file_location()` does NOT insert the module into `sys.modules`.
    A pack using a relative import (`from .sub import ...`) then dies on its
@@ -12,16 +11,34 @@ Two bugs this script exists to fix (both killed the Docker build):
        ModuleNotFoundError: No module named '<pkg>'
    -> fixed by `sys.modules[NAME] = module` BEFORE `exec_module`.
 
-2. The pack imports `comfy.model_management` (via Flux2klein_Ksampler_exp).
-   `/comfyui` must be on sys.path or that import fails too.
+2. The pack imports `comfy.*`, so /comfyui must be on sys.path.
    -> fixed by inserting COMFY_ROOT below.
 
-ComfyUI's own loader does both, which is why these nodes import fine
+3. Importing `comfy.model_management` runs a module-level VRAM probe that
+   calls `torch.cuda.current_device()`. A docker build has NO GPU, so that
+   raises:
+       RuntimeError: Found no NVIDIA driver on your system
+   -> `comfy.model_management` only takes the CPU path when `args.cpu` is set
+      (model_management.py: `if args.cpu: cpu_state = CPUState.CPU`), and
+      `comfy.cli_args` populates `args` by parsing **sys.argv**. So the
+      script cannot set this from the inside - it must be passed `--cpu` on
+      the command line. The base image's own smoke test does the same thing
+      with `python main.py --quick-test-for-ci --cpu`.
+
+ComfyUI's own loader does 1 and 2, which is why these nodes import fine
 interactively while a naive build-time probe does not.
 """
 import importlib.util
 import os
 import sys
+
+# Fail loudly and early if someone drops the flag that makes this work.
+if "--cpu" not in sys.argv:
+    sys.stderr.write(
+        "verify_nodes.py must be run with --cpu (ComfyUI's import-time VRAM "
+        "probe calls torch.cuda, which has no GPU inside a build container).\n"
+    )
+    raise SystemExit(2)
 
 COMFY_ROOT = "/comfyui"
 PACKAGE_NAME = "flux2_klein_color_matcher"
