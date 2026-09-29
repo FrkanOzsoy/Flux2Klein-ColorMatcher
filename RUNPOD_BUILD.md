@@ -21,3 +21,6 @@ RunPod Serverless > New Endpoint > Start from GitHub Repo:
 Supply model weights separately through a network volume. The workflow editor JSON is intentionally not in this public repository; export it from ComfyUI with **Workflow > Export (API)** for the worker request. The API input uses `input.workflow` and optional `input.images`.
 
 This branch is a build candidate only. No RunPod endpoint or GPU worker is created by these files.
+## Current workflow inputs and model paths
+
+The current editor workflow has **two** LoadImage nodes and is not yet the requested three-photo API. Keep the API contract pending until the role of the third photo is specified. The base image's network-volume mapping expects the GGUF diffusion model in `/runpod-volume/models/unet/`, the GGUF text encoder in `/runpod-volume/models/clip/`, the VAE in `/runpod-volume/models/vae/`, and the LoRA in `/runpod-volume/models/loras/`.
