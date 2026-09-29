@@ -68,32 +68,43 @@ RUN /opt/venv/bin/python /verify_nodes.py --cpu
 ARG HF_BASE=https://huggingface.co
 ENV HF_BASE=${HF_BASE}
 
-# curl, not wget: -f fails on HTTP errors, -L follows the CDN redirect, and
-# --retry/-C resume a dropped transfer. The first attempt at the LoRA stalled
-# for 40s, produced 0 bytes and STILL exited 0, so `set -e` did not catch it -
-# wget alone is not reliable enough for a one-shot 632 MB pull from an
-# untested mirror. verify_models.py is the real gate; this just makes the
-# download itself likely to succeed on the first try.
+# wget, not curl: this base image installs wget and has NO curl, so a curl
+# based fetch dies with "curl: not found" (exit 127).
+#
+# The first attempt at the LoRA ran 40s, produced 0 bytes and STILL exited 0,
+# so `set -e` did not catch it. Exit status is therefore not trusted here:
+# each file is checked against a size floor and re-fetched until it is right.
+# Floors are ~94% of the real size (see verify_models.py for exact figures),
+# which is loose enough to survive my own MB rounding and still catches a
+# truncated or empty transfer.
 RUN set -eux; \
     mkdir -p /comfyui/models/diffusion_models /comfyui/models/text_encoders \
              /comfyui/models/vae /comfyui/models/loras; \
     fetch() { \
-      dest="$1"; url="$2"; \
-      echo ">>> $url"; \
-      curl -fL --retry 5 --retry-delay 5 --retry-connrefused --retry-all-errors \
-           -C - --connect-timeout 30 --speed-time 60 --speed-limit 1024 \
-           -o "$dest" "$url"; \
-      test -s "$dest" || { echo "EMPTY DOWNLOAD: $dest"; exit 1; }; \
+      dest="$1"; url="$2"; min_mb="$3"; \
+      mb=$((min_mb * 1024 * 1024)); \
+      attempt=1; \
+      while [ "$attempt" -le 3 ]; do \
+        echo ">>> [$attempt/3] $url"; \
+        wget --tries=3 --timeout=60 --waitretry=5 -O "$dest" "$url" || true; \
+        have=$(stat -c %s "$dest" 2>/dev/null || echo 0); \
+        echo "    got $have bytes, need >= $mb"; \
+        if [ "$have" -ge "$mb" ]; then echo "    OK"; return 0; fi; \
+        attempt=$((attempt + 1)); \
+        sleep 5; \
+      done; \
+      echo "FETCH FAILED after 3 attempts: $dest"; \
+      exit 1; \
     }; \
     \
     fetch /comfyui/models/diffusion_models/flux-2-klein-9b-fp8.safetensors \
-      "${HF_BASE}/MIUProject/FLUX.2-klein-9b-fp8/resolve/main/flux-2-klein-9b-fp8.safetensors"; \
+      "${HF_BASE}/MIUProject/FLUX.2-klein-9b-fp8/resolve/main/flux-2-klein-9b-fp8.safetensors" 8500; \
     fetch /comfyui/models/text_encoders/Qwen3-8B-Uncensor-v2.Q4_K_M.gguf \
-      "${HF_BASE}/mradermacher/Qwen3-8B-Uncensor-v2-GGUF/resolve/main/Qwen3-8B-Uncensor-v2.Q4_K_M.gguf"; \
+      "${HF_BASE}/mradermacher/Qwen3-8B-Uncensor-v2-GGUF/resolve/main/Qwen3-8B-Uncensor-v2.Q4_K_M.gguf" 4600; \
     fetch /comfyui/models/vae/flux2-vae.safetensors \
-      "${HF_BASE}/Thonatossss/flux2-vae/resolve/main/flux2-vae.safetensors"; \
+      "${HF_BASE}/Thonatossss/flux2-vae/resolve/main/flux2-vae.safetensors" 300; \
     fetch /comfyui/models/loras/bfs_head_v1_flux-klein_9b_step3500_rank128.safetensors \
-      "${HF_BASE}/bond12321/bfs-head-klein9b/resolve/main/bfs_head_v1_flux-klein_9b_step3500_rank128.safetensors"
+      "${HF_BASE}/bond12321/bfs-head-klein9b/resolve/main/bfs_head_v1_flux-klein_9b_step3500_rank128.safetensors" 590
 
 # Fail the BUILD, not the job, if anything is missing or truncated. The first
 # live run failed with 'unet_name not in []' and then reported
