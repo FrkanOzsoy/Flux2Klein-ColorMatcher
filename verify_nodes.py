@@ -56,6 +56,25 @@ REQUIRED = {
 if COMFY_ROOT not in sys.path:
     sys.path.insert(0, COMFY_ROOT)
 
+# Enable ComfyUI's argv parsing BEFORE anything imports comfy.cli_args.
+#
+# comfy/options.py ships `args_parsing = False`, and cli_args.py does:
+#     if comfy.options.args_parsing:
+#         args = parser.parse_args()      # reads sys.argv
+#     else:
+#         args = parser.parse_args([])   # reads NOTHING - your flags are dropped
+# Only main.py calls comfy.options.enable_args_parsing(). Importing
+# comfy.model_management directly (as this script does) leaves parsing OFF, so
+# `--cpu` on the command line is silently discarded, args.cpu stays False, and
+# model_management takes the GPU path:
+#     total_vram = get_total_memory(get_torch_device())   # torch.cuda.current_device()
+#     RuntimeError: Found no NVIDIA driver on your system
+# This call is the same one main.py makes on its line 2.
+import comfy.options
+comfy.options.enable_args_parsing()
+
+import comfy.model_management  # noqa: E402,F401  (import proves --cpu took effect)
+
 init = os.path.join(PACKAGE_DIR, "__init__.py")
 if not os.path.isfile(init):
     raise SystemExit("pack not found at %s" % PACKAGE_DIR)
