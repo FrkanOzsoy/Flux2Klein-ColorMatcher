@@ -25,11 +25,22 @@ RUN git clone https://github.com/FrkanOzsoy/Flux2Klein-ColorMatcher.git \
     && git -C /comfyui/custom_nodes/Flux2Klein-ColorMatcher checkout \
       cd818e335f7b13b73dbe97b41946b8a566da6861
 
-# PhotoColorGrainMatch imports OpenCV and NumPy. Test the registrations, then
-# run ComfyUI's CPU startup check so missing custom-node imports fail the build.
+# PhotoColorGrainMatch imports OpenCV and NumPy.
 RUN python -c "import cv2, numpy" || uv pip install opencv-python-headless
-RUN python -c "import importlib.util; p='/comfyui/custom_nodes/Flux2Klein-ColorMatcher/__init__.py'; s=importlib.util.spec_from_file_location('flux2_klein_color_matcher',p,submodule_search_locations=['/comfyui/custom_nodes/Flux2Klein-ColorMatcher']); m=importlib.util.module_from_spec(s); s.loader.exec_module(m); assert {'PhotoColorGrainMatch','Flux2KleinColorAnchor'} <= set(m.NODE_CLASS_MAPPINGS)"
+
+# Assert the in-house node types register, then run ComfyUI's CPU startup check
+# so missing custom-node imports fail the build.
+#
+# This MUST be a script, not a `python -c` one-liner. spec_from_file_location()
+# does not insert the module into sys.modules, so the pack's relative import on
+# its first line raised:
+#     ModuleNotFoundError: No module named 'flux2_klein_color_matcher'
+# which failed both builds at [5/6]. verify_nodes.py registers the module
+# first and puts /comfyui on sys.path (the pack imports comfy.*).
+# The docstring in the script explains it in full.
+COPY verify_nodes.py /verify_nodes.py
+RUN /opt/venv/bin/python /verify_nodes.py
+
 RUN cd /comfyui && timeout 300 python main.py --quick-test-for-ci --cpu
 
 # The official base image already supplies the RunPod handler and startup CMD.
-
