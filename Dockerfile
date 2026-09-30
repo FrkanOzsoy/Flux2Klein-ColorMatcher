@@ -26,7 +26,7 @@ RUN git clone https://github.com/city96/ComfyUI-GGUF.git \
 RUN git clone https://github.com/FrkanOzsoy/Flux2Klein-ColorMatcher.git \
       /comfyui/custom_nodes/Flux2Klein-ColorMatcher \
     && git -C /comfyui/custom_nodes/Flux2Klein-ColorMatcher checkout \
-      cd818e335f7b13b73dbe97b41946b8a566da6861
+      7a33b59dd45768394aaa9d07c0836aa9f05382d2
 
 RUN python -c "import cv2, numpy" || uv pip install opencv-python-headless
 
