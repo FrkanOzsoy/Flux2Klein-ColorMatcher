@@ -14,6 +14,46 @@ from .identity_feature_transfer import (
 from .multi_reference_latent import NODE_CLASS_MAPPINGS as MULTI_REF_NODES, NODE_DISPLAY_NAME_MAPPINGS as MULTI_REF_NAMES
 from .Flux2klein_Ksampler_exp import NODE_CLASS_MAPPINGS as EXP_NODES, NODE_DISPLAY_NAME_MAPPINGS as EXP_NAMES
 
+import cv2
+import numpy as np
+import torch
+
+
+def _frame(images, index, height, width):
+    frame = images[min(index, images.shape[0] - 1)].detach().float().cpu().numpy()
+    if frame.shape[:2] != (height, width):
+        frame = cv2.resize(frame, (width, height), interpolation=cv2.INTER_LINEAR)
+    return np.clip(frame[..., :3], 0.0, 1.0).astype(np.float32)
+
+
+def _mask(masks, index, height, width):
+    if masks.ndim == 2:
+        mask = masks
+    else:
+        mask = masks[min(index, masks.shape[0] - 1)]
+    mask = mask.detach().float().cpu().numpy()
+    if mask.ndim == 3:
+        mask = mask[..., 0]
+    if mask.shape != (height, width):
+        mask = cv2.resize(mask, (width, height), interpolation=cv2.INTER_LINEAR)
+    return np.clip(mask, 0.0, 1.0).astype(np.float32)
+
+
+def _median_and_mad(pixels):
+    median = np.median(pixels, axis=0)
+    mad = np.median(np.abs(pixels - median), axis=0)
+    return median.astype(np.float32), np.maximum(mad, 1e-3).astype(np.float32)
+
+
+def _grain_sigma(image, mask):
+    luminance = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+    detail = luminance - cv2.GaussianBlur(luminance, (3, 3), 0)
+    selected = detail[mask > 0.5]
+    if selected.size < 64:
+        return 0.0
+    return float(1.4826 * np.median(np.abs(selected - np.median(selected))))
+
+
 # ----------------------------------------------------------------------
 # PhotoColorGrainMatch - Lab median/MAD skin-tone + grain match.
 # CPU only (OpenCV/NumPy): no model, no VRAM, deterministic.
