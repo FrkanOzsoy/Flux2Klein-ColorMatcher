@@ -115,32 +115,4 @@ RUN /opt/venv/bin/python /verify_models.py
 # Full import-graph smoke test, CPU only.
 RUN cd /comfyui && timeout 300 python main.py --quick-test-for-ci --cpu
 
-# Keep FaceFusion isolated from ComfyUI's CUDA PyTorch/transformers environment.
-# This exact FaceFusion commit is the user's Windows checkout (3.9.0-1).
-RUN apt-get update && apt-get install -y curl \
-    && rm -rf /var/lib/apt/lists/* \
-    && git clone https://github.com/facefusion/facefusion.git /opt/facefusion \
-    && git -C /opt/facefusion checkout 358f169e95e2b02431722cc287db8acda6658df1 \
-    && uv venv /opt/facefusion-venv \
-    && uv pip install --python /opt/facefusion-venv/bin/python -r /opt/facefusion/requirements.txt \
-    && uv pip uninstall --python /opt/facefusion-venv/bin/python onnxruntime \
-    && uv pip install --python /opt/facefusion-venv/bin/python onnxruntime-gpu==1.24.4
-
-# Reproduce the two reviewed local code edits and the local settings. On Linux
-# the execution provider changes from DirectML to CUDA; video trim is removed.
-COPY facefusion-local.patch /tmp/facefusion-local.patch
-RUN git -C /opt/facefusion apply --check /tmp/facefusion-local.patch \
-    && git -C /opt/facefusion apply /tmp/facefusion-local.patch
-COPY facefusion.ini /opt/facefusion/facefusion.ini
-COPY download_facefusion_models.py /tmp/download_facefusion_models.py
-RUN /opt/facefusion-venv/bin/python /tmp/download_facefusion_models.py
-RUN cd /opt/facefusion && /opt/facefusion-venv/bin/python -c \
-    "import inspect; from facefusion import content_analyser, hash_helper; assert hash_helper.create_hash(inspect.getsource(content_analyser).encode()) == '805047ea'"
-
-# Preserve the upstream GPU/ComfyUI startup checks and replace only its
-# serverless handler invocation. The default /start.sh remains the image CMD.
-COPY multi_handler.py /multi_handler.py
-RUN grep -q 'python -u /handler.py' /start.sh \
-    && sed -i 's@python -u /handler.py@python -u /multi_handler.py@g' /start.sh \
-    && grep -q 'python -u /multi_handler.py' /start.sh
-
+# The official base image already supplies the RunPod handler and startup CMD.
