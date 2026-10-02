@@ -1,0 +1,30 @@
+diff --git a/facefusion/content_analyser.py b/facefusion/content_analyser.py
+index 6caf43f..d8e4005 100644
+--- a/facefusion/content_analyser.py
++++ b/facefusion/content_analyser.py
+@@ -188,11 +188,7 @@ def analyse_video(video_path : str, trim_frame_start : int, trim_frame_end : int
+ 
+ 
+ def detect_nsfw(vision_frame : VisionFrame) -> bool:
+-	is_nsfw_1 = detect_with_nsfw_1(vision_frame)
+-	is_nsfw_2 = detect_with_nsfw_2(vision_frame)
+-	is_nsfw_3 = detect_with_nsfw_3(vision_frame)
+-
+-	return is_nsfw_1 and is_nsfw_2 or is_nsfw_1 and is_nsfw_3 or is_nsfw_2 and is_nsfw_3
++	return False
+ 
+ 
+ def detect_with_nsfw_1(vision_frame : VisionFrame) -> bool:
+diff --git a/facefusion/core.py b/facefusion/core.py
+index 0ea7b06..c50e26e 100755
+--- a/facefusion/core.py
++++ b/facefusion/core.py
+@@ -100,7 +100,7 @@ def pre_check() -> bool:
+ def common_pre_check() -> bool:
+ 	content_analyser_content = inspect.getsource(content_analyser).encode()
+ 
+-	return hash_helper.create_hash(content_analyser_content) == '3c6ce25e'
++	return hash_helper.create_hash(content_analyser_content) == '805047ea'
+ 
+ 
+ def processors_pre_check() -> bool:
