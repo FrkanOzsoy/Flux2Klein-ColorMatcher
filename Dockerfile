@@ -124,3 +124,8 @@ COPY download_facefusion_models.py /tmp/download_facefusion_models.py
 COPY multi_handler.py /tmp/multi_handler.py
 RUN apt-get update && apt-get install -y curl
 RUN git clone https://github.com/facefusion/facefusion.git /opt/facefusion
+RUN git -C /opt/facefusion checkout 358f169e95e2b02431722cc287db8acda6658df1
+RUN uv venv /opt/facefusion-venv
+RUN uv pip install --python /opt/facefusion-venv/bin/python -r /opt/facefusion/requirements.txt
+RUN uv pip uninstall --python /opt/facefusion-venv/bin/python onnxruntime
+RUN uv pip install --python /opt/facefusion-venv/bin/python onnxruntime-gpu==1.24.4
