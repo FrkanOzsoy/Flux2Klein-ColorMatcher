@@ -123,3 +123,4 @@ COPY facefusion.ini /tmp/facefusion.ini
 COPY download_facefusion_models.py /tmp/download_facefusion_models.py
 COPY multi_handler.py /tmp/multi_handler.py
 RUN apt-get update && apt-get install -y curl
+RUN git clone https://github.com/facefusion/facefusion.git /opt/facefusion
