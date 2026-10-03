@@ -41,22 +41,18 @@ def verify(path: Path, size: int, crc: str) -> bool:
 for name, (release, size, crc) in MODELS.items():
     path = DEST / f"{name}.onnx"
     if not verify(path, size, crc):
-        urls = (
-            f"https://github.com/facefusion/facefusion-assets/releases/download/{release}/{name}.onnx",
-            f"https://huggingface.co/facefusion/{release}/resolve/main/{name}.onnx",
-        )
+        url = f"https://huggingface.co/facefusion/{release}/resolve/main/{name}.onnx"
         for attempt in range(3):
-            for url in urls:
-                try:
-                    print(f"Downloading {name} from {url} (attempt {attempt + 1})", flush=True)
-                    with urlopen(url, timeout=90) as source, path.open("wb") as target:
-                        while chunk := source.read(8 * 1024 * 1024):
-                            target.write(chunk)
-                    if verify(path, size, crc):
-                        break
-                    print(f"Size/CRC mismatch for {name}", flush=True)
-                except Exception as exc:
-                    print(f"Download failed for {name}: {exc}", flush=True)
+            try:
+                print(f"Downloading {name} from {url} (attempt {attempt + 1})", flush=True)
+                with urlopen(url, timeout=90) as source, path.open("wb") as target:
+                    while chunk := source.read(8 * 1024 * 1024):
+                        target.write(chunk)
+                if verify(path, size, crc):
+                    break
+                print(f"Size/CRC mismatch for {name}", flush=True)
+            except Exception as exc:
+                print(f"Download failed for {name}: {exc}", flush=True)
             if verify(path, size, crc):
                 break
             time.sleep(5)
@@ -64,3 +60,4 @@ for name, (release, size, crc) in MODELS.items():
             raise SystemExit(f"FaceFusion model {name} could not be verified")
     (DEST / f"{name}.hash").write_text(crc, encoding="ascii")
     print(f"OK {name}: {size} bytes, CRC32 {crc}", flush=True)
+
