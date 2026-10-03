@@ -1,0 +1,439 @@
+{
+  "76": {
+    "inputs": {
+      "image": "clipspace-painted-masked-1790215785529.png [input]"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Görüntü Yükle"
+    }
+  },
+  "104": {
+    "inputs": {
+      "filename_prefix": "Flux2-Klein-4b-base",
+      "images": [
+        "128",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Görüntüyü Kaydet"
+    }
+  },
+  "105": {
+    "inputs": {
+      "image": "Gabriela_025.jpg"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Görüntü Yükle"
+    }
+  },
+  "113": {
+    "inputs": {
+      "value": 894025812868345
+    },
+    "class_type": "PrimitiveInt",
+    "_meta": {
+      "title": "Int"
+    }
+  },
+  "115": {
+    "inputs": {
+      "sampler_name": "euler"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSeç"
+    }
+  },
+  "116": {
+    "inputs": {
+      "noise": [
+        "117",
+        0
+      ],
+      "guider": [
+        "132",
+        0
+      ],
+      "sampler": [
+        "115",
+        0
+      ],
+      "sigmas": [
+        "123",
+        0
+      ],
+      "latent_image": [
+        "125",
+        2
+      ]
+    },
+    "class_type": "SamplerCustomAdvanced",
+    "_meta": {
+      "title": "GelişmişÖzelÖrnekleyici"
+    }
+  },
+  "117": {
+    "inputs": {
+      "noise_seed": [
+        "113",
+        0
+      ]
+    },
+    "class_type": "RandomNoise",
+    "_meta": {
+      "title": "RastgeleGürültü"
+    }
+  },
+  "120": {
+    "inputs": {
+      "text": "Replace the head and face of the person in Image 1 with the head and face from Image 2. This is a strict identity transfer focused on replicating the exact source features without enhancement. The new face must possess the precise facial geometry and unique identifying details visible in Image 2. Seamlessly blend this strict identity onto the exact facial expression, head pose, lighting direction, and skin tone of Image 1. Replicate the surface texture seen in Image 2; do not add un-requested artifacts, additional texture, or blemishes not present in the source material. Perfect surface matching is required. High fidelity, raw photography, matching ambient shadows.",
+      "clip": [
+        "146",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Positive Prompt)"
+    }
+  },
+  "121": {
+    "inputs": {
+      "text": "",
+      "clip": [
+        "146",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode ( Negative Prompt)"
+    }
+  },
+  "122": {
+    "inputs": {
+      "vae_name": "flux2-vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "VAE Yükle"
+    }
+  },
+  "123": {
+    "inputs": {
+      "steps": 8,
+      "width": [
+        "127",
+        0
+      ],
+      "height": [
+        "127",
+        1
+      ]
+    },
+    "class_type": "Flux2Scheduler",
+    "_meta": {
+      "title": "Flux2Scheduler"
+    }
+  },
+  "125": {
+    "inputs": {
+      "noise_mask": true,
+      "positive": [
+        "124:137",
+        0
+      ],
+      "negative": [
+        "124:135",
+        0
+      ],
+      "vae": [
+        "122",
+        0
+      ],
+      "pixels": [
+        "130",
+        1
+      ],
+      "mask": [
+        "130",
+        2
+      ]
+    },
+    "class_type": "InpaintModelConditioning",
+    "_meta": {
+      "title": "İçBoyaModelKoşullandırma"
+    }
+  },
+  "127": {
+    "inputs": {
+      "image": [
+        "130",
+        1
+      ]
+    },
+    "class_type": "GetImageSize",
+    "_meta": {
+      "title": "Resim Boyutunu Al"
+    }
+  },
+  "128": {
+    "inputs": {
+      "stitcher": [
+        "130",
+        0
+      ],
+      "inpainted_image": [
+        "129",
+        0
+      ]
+    },
+    "class_type": "InpaintStitchImproved",
+    "_meta": {
+      "title": "✂️ Inpaint Stitch"
+    }
+  },
+  "129": {
+    "inputs": {
+      "samples": [
+        "116",
+        0
+      ],
+      "vae": [
+        "122",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Kod Çözme"
+    }
+  },
+  "130": {
+    "inputs": {
+      "downscale_algorithm": "bilinear",
+      "upscale_algorithm": "bicubic",
+      "preresize": false,
+      "preresize_mode": "ensure minimum and maximum resolution",
+      "preresize_min_width": 1024,
+      "preresize_min_height": 1024,
+      "preresize_max_width": 1024,
+      "preresize_max_height": 1024,
+      "mask_fill_holes": false,
+      "mask_expand_pixels": 0,
+      "mask_invert": false,
+      "mask_blend_pixels": 64,
+      "mask_hipass_filter": 0.1,
+      "extend_for_outpainting": false,
+      "extend_up_factor": 1,
+      "extend_down_factor": 1,
+      "extend_left_factor": 1,
+      "extend_right_factor": 1,
+      "context_from_mask_extend_factor": 1.2,
+      "output_resize_to_target_size": true,
+      "output_target_width": 1024,
+      "output_target_height": 1024,
+      "output_padding": "32",
+      "device_mode": "gpu (much faster)",
+      "image": [
+        "76",
+        0
+      ],
+      "mask": [
+        "76",
+        1
+      ]
+    },
+    "class_type": "InpaintCropImproved",
+    "_meta": {
+      "title": "✂️ Inpaint Crop"
+    }
+  },
+  "131": {
+    "inputs": {
+      "upscale_method": "nearest-exact",
+      "megapixels": 1,
+      "resolution_steps": 1,
+      "image": [
+        "105",
+        0
+      ]
+    },
+    "class_type": "ImageScaleToTotalPixels",
+    "_meta": {
+      "title": "Görüntüyü Toplam Piksele Göre Ölçekle"
+    }
+  },
+  "132": {
+    "inputs": {
+      "cfg": 1,
+      "model": [
+        "146",
+        0
+      ],
+      "positive": [
+        "126:77",
+        0
+      ],
+      "negative": [
+        "126:134",
+        0
+      ]
+    },
+    "class_type": "CFGGuider",
+    "_meta": {
+      "title": "CFG Rehberi"
+    }
+  },
+  "138": {
+    "inputs": {
+      "unet_name": "flux-2-klein-9b-fp8.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Unet Loader (GGUF)"
+    }
+  },
+  "139": {
+    "inputs": {
+      "clip_name": "Qwen3-8B-Uncensor-v2.Q4_K_M.gguf",
+      "type": "flux2"
+    },
+    "class_type": "CLIPLoaderGGUF",
+    "_meta": {
+      "title": "CLIPLoader (GGUF)"
+    }
+  },
+  "142": {
+    "inputs": {
+      "mask": [
+        "76",
+        1
+      ]
+    },
+    "class_type": "MaskPreview+",
+    "_meta": {
+      "title": "🔧 Mask Preview"
+    }
+  },
+  "146": {
+    "inputs": {
+      "lora_name": "bfs_head_v1_flux-klein_9b_step3500_rank128.safetensors",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "138",
+        0
+      ],
+      "clip": [
+        "139",
+        0
+      ]
+    },
+    "class_type": "LoraLoader",
+    "_meta": {
+      "title": "LoRA Yükle"
+    }
+  },
+  "124:135": {
+    "inputs": {
+      "conditioning": [
+        "121",
+        0
+      ],
+      "latent": [
+        "124:136",
+        0
+      ]
+    },
+    "class_type": "ReferenceLatent",
+    "_meta": {
+      "title": "Referans Gizli Değişken"
+    }
+  },
+  "124:136": {
+    "inputs": {
+      "pixels": [
+        "130",
+        1
+      ],
+      "vae": [
+        "122",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Kodlama"
+    }
+  },
+  "124:137": {
+    "inputs": {
+      "conditioning": [
+        "120",
+        0
+      ],
+      "latent": [
+        "124:136",
+        0
+      ]
+    },
+    "class_type": "ReferenceLatent",
+    "_meta": {
+      "title": "Referans Gizli Değişken"
+    }
+  },
+  "126:134": {
+    "inputs": {
+      "conditioning": [
+        "125",
+        1
+      ],
+      "latent": [
+        "126:78",
+        0
+      ]
+    },
+    "class_type": "ReferenceLatent",
+    "_meta": {
+      "title": "Referans Gizli Değişken"
+    }
+  },
+  "126:78": {
+    "inputs": {
+      "pixels": [
+        "131",
+        0
+      ],
+      "vae": [
+        "122",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Kodlama"
+    }
+  },
+  "126:77": {
+    "inputs": {
+      "conditioning": [
+        "125",
+        0
+      ],
+      "latent": [
+        "126:78",
+        0
+      ]
+    },
+    "class_type": "ReferenceLatent",
+    "_meta": {
+      "title": "Referans Gizli Değişken"
+    }
+  }
+}
