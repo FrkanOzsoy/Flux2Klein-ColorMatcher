@@ -129,3 +129,12 @@ RUN uv venv /opt/facefusion-venv
 RUN uv pip install --python /opt/facefusion-venv/bin/python -r /opt/facefusion/requirements.txt
 RUN uv pip uninstall --python /opt/facefusion-venv/bin/python onnxruntime
 RUN uv pip install --python /opt/facefusion-venv/bin/python onnxruntime-gpu==1.24.4
+RUN git -C /opt/facefusion apply --check /tmp/facefusion-local.patch
+RUN git -C /opt/facefusion apply /tmp/facefusion-local.patch
+RUN cp /tmp/facefusion.ini /opt/facefusion/facefusion.ini
+RUN /opt/facefusion-venv/bin/python /tmp/download_facefusion_models.py
+RUN cd /opt/facefusion && /opt/facefusion-venv/bin/python -c "import inspect; from facefusion import content_analyser, hash_helper; assert hash_helper.create_hash(inspect.getsource(content_analyser).encode()) == '805047ea'"
+RUN cp /tmp/multi_handler.py /multi_handler.py
+RUN grep -q 'python -u /handler.py' /start.sh
+RUN sed -i 's@python -u /handler.py@python -u /multi_handler.py@g' /start.sh
+RUN grep -q 'python -u /multi_handler.py' /start.sh
