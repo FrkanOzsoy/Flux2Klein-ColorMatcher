@@ -122,13 +122,4 @@ COPY facefusion-local.patch /tmp/facefusion-local.patch
 COPY facefusion.ini /tmp/facefusion.ini
 COPY download_facefusion_models.py /tmp/download_facefusion_models.py
 COPY multi_handler.py /tmp/multi_handler.py
-
-# Install the pinned FaceFusion source in a separate environment.
-RUN apt-get update && apt-get install -y curl \
-    && rm -rf /var/lib/apt/lists/* \
-    && git clone https://github.com/facefusion/facefusion.git /opt/facefusion \
-    && git -C /opt/facefusion checkout 358f169e95e2b02431722cc287db8acda6658df1 \
-    && uv venv /opt/facefusion-venv \
-    && uv pip install --python /opt/facefusion-venv/bin/python -r /opt/facefusion/requirements.txt \
-    && uv pip uninstall --python /opt/facefusion-venv/bin/python onnxruntime \
-    && uv pip install --python /opt/facefusion-venv/bin/python onnxruntime-gpu==1.24.4
+RUN apt-get update && apt-get install -y curl
